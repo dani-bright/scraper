@@ -1,3 +1,4 @@
+export const CHARACTER_LIMIT = 1000;
 export const KEYWORDS: Record<string, string[]> = {
   regulation: [
     'AI Act',
