@@ -10,7 +10,7 @@ export class Topic {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column()
+  @Column({ unique: true })
   name: string;
 
   @Column({ default: 0 })

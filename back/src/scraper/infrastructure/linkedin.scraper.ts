@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 import { Injectable } from '@nestjs/common';
 import { chromium, Browser, Page } from 'playwright';
 import { Scraper, ScrapedPost } from '../domain/scraper.interface';
@@ -47,25 +46,7 @@ export class LinkedInScraper implements Scraper {
 
   async fetchPosts(mode: keyof typeof KEYWORDS): Promise<ScrapedPost[]> {
     await this.init();
-    const context = await this.browser.newContext({
-      extraHTTPHeaders: {
-        accept:
-          'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
-        'accept-language': 'en-US,en;q=0.9,fr-FR;q=0.8,fr;q=0.7',
-        'cache-control': 'max-age=0',
-        priority: 'u=0, i',
-        'sec-ch-prefers-color-scheme': 'dark',
-        'sec-ch-ua':
-          '"Chromium";v="142", "Google Chrome";v="142", "Not_A Brand";v="99"',
-        'sec-ch-ua-mobile': '?0',
-        'sec-ch-ua-platform': '"macOS"',
-        'sec-fetch-dest': 'document',
-        'sec-fetch-mode': 'navigate',
-        'sec-fetch-site': 'same-origin',
-        'sec-fetch-user': '?1',
-        'upgrade-insecure-requests': '1',
-      },
-    });
+    const context = await this.browser.newContext();
     const page: Page = await context.newPage();
 
     // await page.context().addCookies([
@@ -80,67 +61,81 @@ export class LinkedInScraper implements Scraper {
     //   },
     // ]);
 
-    const query = KEYWORDS[mode].join(' OR ');
-    await page.goto(
-      `https://www.linkedin.com/top-content/artificial-intelligence/`,
-    );
+    await page.goto(`https://www.linkedin.com/top-content`);
 
-    await page.waitForTimeout(2000);
-    await page.evaluate(() => window.scrollBy(0, 2000));
-    await page.waitForTimeout(1500);
+    const links: string[] = await page.$$eval('.topic-category', (nodes) => {
+      return nodes.map((node) => {
+        const topicLink = node.getAttribute('data-url');
 
-    console.log('After goto, URL =', page.url());
-    const keywords = KEYWORDS[mode];
-
-    const posts: ScrapedPost[] = await page.$$eval(
-      '.mb-1\\.5',
-      (nodes, keywords) => {
-        const filteredNode = nodes.filter((node) => {
-          const reactions = node
-            .querySelector('.font-normal.ml-0\\.5')
-            ?.textContent?.trim();
-          if (!reactions) {
-            return false;
-          }
-          const reactionsCount = parseInt(reactions);
-          const content =
-            node
-              .querySelector('.attributed-text-segment-list__content')
-              ?.textContent?.toLowerCase() || '';
-
-          const containsKeyword = keywords.some((keyword) =>
-            content.includes(keyword.toLowerCase()),
-          );
-          return containsKeyword && reactionsCount >= 100;
-        });
-
-        return filteredNode.map((node) => ({
-          authorName:
-            node
-              .querySelector('.entity-result__title-text')
-              ?.textContent?.trim() || '',
-          authorAvatar: node.querySelector('img')?.getAttribute('src') || '',
-          authorBio:
-            node
-              .querySelector('.entity-result__primary-subtitle')
-              ?.textContent?.trim() || '',
-          content:
-            node
-              .querySelector('.attributed-text-segment-list__content')
-              ?.textContent?.toLowerCase() || '',
-          createdAt:
-            node.querySelector('time')?.textContent?.toLowerCase() || '',
-          reactions: node
-            .querySelector('.font-normal.ml-0\\.5')
-            ?.textContent?.trim(),
-          comments: '',
-          url: node.querySelector('a')?.getAttribute('href') || '',
-        }));
-      },
-      keywords,
-    );
+        return topicLink;
+      });
+    });
 
     await page.close();
+
+    const posts: ScrapedPost[] = [];
+
+    for (const link of links) {
+      const newPage = await context.newPage();
+      await newPage.goto(link);
+
+      const keywords = KEYWORDS[mode];
+
+      const foundPosts: ScrapedPost[] = await newPage.$$eval(
+        '.mb-1\\.5',
+        (nodes, keywords) => {
+          const filteredNode = nodes.filter((node) => {
+            const reactions = node
+              .querySelector('.font-normal.ml-0\\.5')
+              ?.textContent?.trim();
+            if (!reactions) {
+              return false;
+            }
+            const reactionsCount = parseInt(reactions);
+            const content =
+              node
+                .querySelector('.attributed-text-segment-list__content')
+                ?.textContent?.toLowerCase() || '';
+
+            const containsKeyword = keywords.some((keyword) =>
+              content.includes(keyword.toLowerCase()),
+            );
+            return containsKeyword && reactionsCount >= 100;
+          });
+
+          return filteredNode.map((node) => ({
+            authorName:
+              node
+                .querySelector('.text-sm.link-styled.no-underline.leading-open')
+                ?.textContent?.trim() || '',
+            authorAvatar:
+              node
+                .querySelector('img.w-6.h-6.lazy-loaded')
+                ?.getAttribute('src') || '',
+            content:
+              node
+                .querySelector('.attributed-text-segment-list__content')
+                ?.textContent?.toLowerCase() || '',
+            createdAt:
+              node.querySelector('time')?.textContent?.toLowerCase() || '',
+            reactions: node
+              .querySelector('.font-normal.ml-0\\.5')
+              ?.textContent?.trim(),
+            comments: node
+              .querySelector('a[data-num-comment]')
+              ?.textContent?.trim(),
+            url:
+              node
+                .querySelector('div.share-button')
+                ?.getAttribute('data-share-url') || '',
+          }));
+        },
+        keywords,
+      );
+
+      await newPage.close();
+      posts.push(...foundPosts);
+    }
     return posts;
   }
 

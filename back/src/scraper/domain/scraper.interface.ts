@@ -7,7 +7,6 @@ export interface Scraper {
 export interface ScrapedPost {
   authorName: string;
   authorAvatar: string;
-  authorBio: string;
   content: string;
   createdAt: string;
   reactions: string;

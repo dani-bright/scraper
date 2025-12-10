@@ -1,11 +1,17 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, Param } from '@nestjs/common';
+import { TopicService } from './topic.service';
 
-@Controller()
+@Controller('topics')
 export class TopicController {
-  constructor() {}
+  constructor(private readonly topicService: TopicService) {}
 
   @Get()
-  getHello(): any {
-    return;
+  async findAll() {
+    return this.topicService.findAll();
+  }
+
+  @Get(':id/posts')
+  async findPosts(@Param('id') id: number) {
+    return this.topicService.findPostsByTopic(id);
   }
 }

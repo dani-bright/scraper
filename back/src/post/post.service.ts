@@ -18,7 +18,6 @@ export class PostService {
   ): Promise<Post> {
     const topic = await this.topicService.findOrCreate(mainKeyword);
 
-    console.log('Creating post under topic:', topic.name);
     const post = this.postRepo.create({
       authorAvatarUrl: postData.authorAvatarUrl,
       authorName: postData.authorName,

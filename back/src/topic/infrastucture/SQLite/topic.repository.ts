@@ -15,7 +15,16 @@ export class SQLiteTopicRepository implements TopicRepository {
     return this.repo.find();
   }
 
+  async save(topic: Partial<Topic>): Promise<Topic> {
+    const topicEntity = this.repo.create(topic);
+    return this.repo.save(topicEntity);
+  }
+
   async findOne(id: number): Promise<Topic | null> {
     return this.repo.findOne({ where: { id } });
+  }
+
+  async findbyName(name: string): Promise<Topic | null> {
+    return this.repo.findOne({ where: { name } });
   }
 }
