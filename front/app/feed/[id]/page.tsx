@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useEffect, useState } from "react";
+import { use, useEffect, useState, useRef, useCallback } from "react";
 import {
   Card,
   CardHeader,
@@ -31,20 +31,49 @@ export default function FeedPage({
 
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+
+  const loaderRef = useRef<HTMLDivElement>(null);
+
+  const fetchPosts = useCallback(async () => {
+    if (!id || !hasMore) return;
+    setLoading(true);
+    try {
+      const res = await fetch(
+        `http://127.0.0.1:3000/topics/${id}/posts?page=${page}&limit=10`
+      );
+      const data: Post[] = await res.json();
+
+      setPosts((prev) => [...prev, ...data]);
+      if (data.length < 10) setHasMore(false);
+    } finally {
+      setLoading(false);
+    }
+  }, [id, page, hasMore]);
 
   useEffect(() => {
-    if (!id) return;
+    fetchPosts();
+  }, [fetchPosts]);
 
-    fetch(`http://127.0.0.1:3000/topics/${id}/posts`)
-      .then((res) => res.json())
-      .then((data) => setPosts(data))
-      .finally(() => setLoading(false));
-  }, [id]);
+  useEffect(() => {
+    if (!loaderRef.current) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && !loading && hasMore) {
+          setPage((prev) => prev + 1);
+        }
+      },
+      { threshold: 1 }
+    );
+    observer.observe(loaderRef.current);
+    return () => observer.disconnect();
+  }, [loading, hasMore]);
 
-  if (loading) return <p className="p-4">Chargement...</p>;
+  if (!posts.length && loading) return <p className="p-4">Chargement...</p>;
   if (!posts.length)
     return <p className="p-4">Aucun post trouvé pour ce sujet</p>;
-  console.log(posts);
+
   return (
     <div className="grid grid-cols-1 gap-4 p-4">
       {posts.map((post) => (
@@ -53,7 +82,9 @@ export default function FeedPage({
             {post.authorAvatarUrl && (
               <Image
                 src={post.authorAvatarUrl}
-                alt="seed avatar"
+                alt="avatar"
+                width={32}
+                height={32}
                 className="w-8 h-8 rounded-full"
               />
             )}
@@ -86,6 +117,8 @@ export default function FeedPage({
           </CardContent>
         </Card>
       ))}
+      {loading && <p className="p-4">Chargement...</p>}
+      <div ref={loaderRef} />
     </div>
   );
 }

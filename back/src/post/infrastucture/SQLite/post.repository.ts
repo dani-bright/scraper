@@ -17,10 +17,13 @@ export class SQLitePostRepository implements PostRepository {
     return this.repo.save(postEntity);
   }
 
-  async findByTopic(topicId: number): Promise<Post[]> {
+  async findByTopic(topicId: number, page = 1, limit = 10): Promise<Post[]> {
     return this.repo.find({
       where: { topic: { id: topicId } },
       relations: ['topic'],
+      order: { id: 'DESC' },
+      skip: (page - 1) * limit,
+      take: limit,
     });
   }
 

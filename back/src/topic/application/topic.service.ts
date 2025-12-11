@@ -34,7 +34,7 @@ export class TopicService {
     return this.topicRepo.findAll();
   }
 
-  async findPostsByTopic(topicId: number) {
-    return this.postRepo.findByTopic(topicId);
+  async findPostsByTopic(topicId: number, page = 1, limit = 10) {
+    return this.postRepo.findByTopic(topicId, page, limit);
   }
 }

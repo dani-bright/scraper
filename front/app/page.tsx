@@ -22,7 +22,6 @@ export default function SubjectsPage() {
   const [topics, setTopics] = useState<Topic[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // Fonction pour fetch les topics
   const fetchTopics = async () => {
     setLoading(true);
     try {
