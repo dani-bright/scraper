@@ -9,7 +9,7 @@ This project is a technical test aimed at scraping LinkedIn content and categori
 - NestJS
 - TypeORM with SQLite
 - Playwright for scraping
-- AI ?
+- open ai
 
 ## Frontend:
 
@@ -105,5 +105,9 @@ Posts are filtered based on defined keywords concerning regulation.
 
 # amelioration
 
-- frontend is not well written at all (fetch directly in pages, etc) think of a better design
-- classification is poor. might want to use a AI model. couldn't find a good one for free.
+- frontend is not well written at all (bad design such as fetch directly in pages, etc) think of a better design
+- classify the profile of the author
+- implement popularity score
+- maybe too much different topics
+- impelement infinite scroll
+- add tests

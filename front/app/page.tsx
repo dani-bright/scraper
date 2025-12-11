@@ -8,7 +8,6 @@ import {
   CardDescription,
   CardContent,
 } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import Link from "next/link";
 
 type Topic = {
@@ -22,7 +21,6 @@ type Topic = {
 export default function SubjectsPage() {
   const [topics, setTopics] = useState<Topic[]>([]);
   const [loading, setLoading] = useState(false);
-  const [scraping, setScraping] = useState(false);
 
   // Fonction pour fetch les topics
   const fetchTopics = async () => {
@@ -42,29 +40,10 @@ export default function SubjectsPage() {
     fetchTopics();
   }, []);
 
-  const handleScrape = async () => {
-    setScraping(true);
-    try {
-      await fetch("http://127.0.0.1:3000/scraper", { method: "POST" });
-      await fetchTopics();
-    } catch (err) {
-      console.error("Erreur scraping:", err);
-    } finally {
-      setScraping(false);
-    }
-  };
-
   return (
     <div className="p-4">
       <div className="flex justify-between items-center mb-4">
         <h1 className="text-2xl font-bold">Sujets réglementaires</h1>
-        <Button
-          onClick={handleScrape}
-          disabled={scraping}
-          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
-        >
-          {scraping ? "Scraping..." : "Lancer le scraping"}
-        </Button>
       </div>
 
       {loading ? (

@@ -4,5 +4,5 @@ export const POST_REPOSITORY = 'POST_REPOSITORY';
 
 export interface PostRepository {
   findByTopic(topicId: number): Promise<Post[]>;
-  save(posts: Post[]): Promise<void>;
+  save(post: Partial<Post>): Promise<Post>;
 }

@@ -1,8 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { PostRepository } from '../../domain/post.repository';
 import { Post } from '../../domain/post.entity';
-import { Repository } from 'typeorm';
+import { Like, Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
+import { normalizeUrl } from 'src/shared/utils';
 
 @Injectable()
 export class SQLitePostRepository implements PostRepository {
@@ -11,6 +12,11 @@ export class SQLitePostRepository implements PostRepository {
     private readonly repo: Repository<Post>,
   ) {}
 
+  async save(post: Partial<Post>): Promise<Post> {
+    const postEntity = this.repo.create(post);
+    return this.repo.save(postEntity);
+  }
+
   async findByTopic(topicId: number): Promise<Post[]> {
     return this.repo.find({
       where: { topic: { id: topicId } },
@@ -18,7 +24,12 @@ export class SQLitePostRepository implements PostRepository {
     });
   }
 
-  async save(posts: Post[]): Promise<void> {
-    await this.repo.save(posts);
+  async findByUrl(url: string): Promise<Post | null> {
+    const normalizedUrl = normalizeUrl(url);
+    return this.repo.findOne({
+      where: {
+        url: Like(`${normalizedUrl}%`),
+      },
+    });
   }
 }

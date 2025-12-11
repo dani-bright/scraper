@@ -1,7 +1,5 @@
-import { KEYWORDS } from 'src/shared/constants';
-
 export interface Scraper {
-  fetchPosts(mode: keyof typeof KEYWORDS): Promise<ScrapedPost[]>;
+  fetchPosts(): AsyncGenerator<ScrapedPost>;
 }
 
 export interface ScrapedPost {

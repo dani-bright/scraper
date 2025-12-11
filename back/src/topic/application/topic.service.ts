@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
-import { Topic } from './domain/topic.entity';
-import { SQLiteTopicRepository } from './infrastucture/SQLite/topic.repository';
 import { SQLitePostRepository } from 'src/post/infrastucture/SQLite/post.repository';
+import { Topic } from '../domain/topic.entity';
+import { SQLiteTopicRepository } from '../infrastucture/SQLite/topic.repository';
 
 @Injectable()
 export class TopicService {
@@ -15,6 +15,7 @@ export class TopicService {
     if (topic) {
       return topic;
     }
+    console.log(`Creating new topic: ${name}`);
     topic = await this.topicRepo.save({
       name,
       postsCount: 0,

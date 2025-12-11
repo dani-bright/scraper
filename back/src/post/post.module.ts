@@ -3,7 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { Post } from './domain/post.entity';
 import { TopicModule } from '../topic/topic.module';
 import { SQLitePostRepository } from './infrastucture/SQLite/post.repository';
-import { PostService } from './post.service';
+import { PostService } from './application/post.service';
 
 @Module({
   imports: [TypeOrmModule.forFeature([Post]), TopicModule],
