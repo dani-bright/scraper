@@ -1,6 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { load } from 'cheerio';
 import { Scraper, ScrapedPost } from '../domain/scraper.interface';
+import {
+  AUTHOR_MIN_RELEVANT_FOLLOWERS,
+  CONCURRENCY,
+  POST_MIN_RELEVANT_REACTIONS,
+} from 'src/shared/constants';
 
 @Injectable()
 export class LinkedInScraper implements Scraper {
@@ -38,6 +43,22 @@ export class LinkedInScraper implements Scraper {
     return links;
   }
 
+  fetchRelatedTopicLinks(html: string): string[] {
+    const $ = load(html);
+    const links: string[] = [];
+
+    $(
+      '.top-content-related-topics a[data-tracking-control-name="keyword-landing-page-top_content__pill"]',
+    ).each((_, el) => {
+      const href = $(el).attr('href');
+      if (href) {
+        links.push(href);
+      }
+    });
+
+    return links;
+  }
+
   async scrapePostsFromPage(url: string): Promise<ScrapedPost[]> {
     const html = await this.fetchHtml(url);
     const $ = load(html);
@@ -50,8 +71,19 @@ export class LinkedInScraper implements Scraper {
       const reactionsText = node.find('.font-normal.ml-0\\.5').text().trim();
       if (!reactionsText) return;
 
+      const followersText = node
+        .find('span.text-color-text-low-emphasis.px-0\\.25.pr-0\\.5')
+        .text()
+        .trim();
       const reactionsCount = parseInt(reactionsText);
-      if (isNaN(reactionsCount) || reactionsCount < 300) return;
+      const followersCount = parseInt(followersText.replace(/\D/g, ''));
+      if (
+        isNaN(reactionsCount) ||
+        reactionsCount < POST_MIN_RELEVANT_REACTIONS ||
+        isNaN(followersCount) ||
+        followersCount < AUTHOR_MIN_RELEVANT_FOLLOWERS
+      )
+        return;
 
       const commentText = node.find('a[data-num-comments]').text();
       posts.push({
@@ -67,7 +99,7 @@ export class LinkedInScraper implements Scraper {
           .toLowerCase(),
         createdAt: node.find('time').text().trim().toLowerCase(),
         reactions: reactionsText,
-        comments: commentText.trim().substring(0, commentText.indexOf(' ')),
+        comments: commentText.trim().replace(/\D/g, ''),
         url: node.find('div.share-button').attr('data-share-url') ?? '',
       });
     });
@@ -75,15 +107,35 @@ export class LinkedInScraper implements Scraper {
     return posts;
   }
 
-  async fetchPosts(): Promise<ScrapedPost[]> {
+  async *fetchPosts(): AsyncGenerator<ScrapedPost> {
     const links = await this.fetchTopicLinks();
-    const posts: ScrapedPost[] = [];
 
-    for (const link of links) {
-      const pagePosts = await this.scrapePostsFromPage(link);
-      posts.push(...pagePosts);
+    const allRelatedLinksArrays = await Promise.all(
+      links.map(async (link) => {
+        const html = await this.fetchHtml(link);
+        return this.fetchRelatedTopicLinks(html);
+      }),
+    );
+
+    const relatedLinks = allRelatedLinksArrays.flat();
+    const allLinks = [...links, ...relatedLinks];
+
+    console.log(`Found ${allLinks.length} topic links to scrape.`);
+
+    const totalBatches = Math.ceil(allLinks.length / CONCURRENCY);
+
+    for (let i = 0; i < allLinks.length; i += CONCURRENCY) {
+      const batch = allLinks.slice(i, i + CONCURRENCY);
+      console.log(`Batch ${Math.floor(i / CONCURRENCY) + 1} / ${totalBatches}`);
+
+      const results = await Promise.all(
+        batch.map((link) => this.scrapePostsFromPage(link)),
+      );
+      const scrapedPosts = results.flat();
+
+      for (const post of scrapedPosts) {
+        yield post;
+      }
     }
-
-    return posts;
   }
 }

@@ -35,10 +35,10 @@ export class ScraperService {
 
   async run(withAi = false) {
     console.log('Starting scraping process...');
-    const scraped = await this.linkedin.fetchPosts();
-    console.log(`Scraped ${scraped.length} posts`);
-    let classification: { topic: string; isRegulatory: boolean };
-    for (const p of scraped) {
+
+    for await (const p of this.linkedin.fetchPosts()) {
+      let classification: { topic: string; isRegulatory: boolean };
+
       if (withAi) {
         classification = await this.ai.classifyRegulation(p.content);
 
@@ -74,10 +74,10 @@ export class ScraperService {
         },
         classification.topic,
       );
+
+      console.log(`Saved post about ${classification.topic}`);
     }
 
-    console.log(`Saved posts to database`);
-
-    return scraped.length;
+    console.log(`finish saving posts to database`);
   }
 }

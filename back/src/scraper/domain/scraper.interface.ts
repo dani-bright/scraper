@@ -1,5 +1,5 @@
 export interface Scraper {
-  fetchPosts(): Promise<ScrapedPost[]>;
+  fetchPosts(): AsyncGenerator<ScrapedPost>;
 }
 
 export interface ScrapedPost {
